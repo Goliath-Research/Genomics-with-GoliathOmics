@@ -8,8 +8,9 @@
 > locally in dev mode. It was verified end to end on PostgreSQL 19 with the portal: navigation
 > and the semantic lists show the public ENA rows. The lab pins a GoliathOmics commit that
 > includes two open fixes (GoliathOmics PRs #113 and #115); the pin moves to `main` when they
-> merge. Module 12 teaches GoliathApp's history ledger from GoliathApp PR #109 (open) and marks
-> the follow-up history features (H2–H4) as pending. The only biological data is public ENA run
+> merge. Module 12 teaches GoliathApp's history features from the open GoliathApp PRs #109–#112
+> (ledgers, Meta object history, run history and retention, e-signatures) and GoliathOmics PR
+> #116 (clinical record history), and checks for each feature before using it. The only biological data is public ENA run
 > SRR28293403 (HG00621). GoliathOmics is not FDA-cleared or approved, and this course does not
 > claim it complies with 21 CFR Part 11.
 

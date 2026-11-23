@@ -65,9 +65,9 @@ side in a stack of pull requests (`docs/history-and-audit.md`):
 | Slice | Adds | Status (Nov 22, 2026) |
 |---|---|---|
 | H1 ledger core | append-only, hash-chained ledgers for the `portal.*_audit` tables, `"Onboarding"."AuditLog"`, `wf.event`, `wf.event_delivery`; `fn_ledger_verify`, `fn_ledger_verify_all`, `fn_ledger_checkpoint` | GoliathApp PR #109, open |
-| H2 Meta object history | `"Meta"."ObjValuesHistory"` | follow-up PR |
-| H3 run history and retention | run-history ledger, no cascading deletes of runs, `platform/RetentionPolicy` with tombstones | follow-up PR |
-| H4 electronic signatures | `platform/ElectronicSignature` | follow-up PR |
+| H2 Meta object history | `"Meta"."ObjValuesHistory"` | GoliathApp PR #110 (open) |
+| H3 run history and retention | run-history ledger, no cascading deletes of runs, `platform/RetentionPolicy` with tombstones | GoliathApp PR #111 (open) |
+| H4 electronic signatures | `platform/ElectronicSignature` | GoliathApp PR #112 (open) |
 
 Gaps you can see in the lab right now (the exercise below makes you find them):
 
@@ -81,7 +81,8 @@ Gaps you can see in the lab right now (the exercise below makes you find them):
 * The JSONL logs are append-only by convention, not tamper-evident.
 
 Module 12 builds the evidence package on the H1–H4 features as they merge and lists what still
-needs a GoliathOmics change (for example, feeding Omics records into H2 history).
+needs a GoliathOmics change. The first one is GoliathOmics PR #116 (open), which keeps a history
+of every change to the relational clinical tables and registers it as an H1 ledger.
 
 ## Lab sequence
 
