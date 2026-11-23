@@ -1,0 +1,12 @@
+.env
+.lab-src
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+__marimo__/
+data/downloads/
+*.bam
+*.bai
+*.cram
