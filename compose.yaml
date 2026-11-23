@@ -1,0 +1,82 @@
+name: genomics-with-goliathomics
+
+# Disposable PostgreSQL 19 lab for Genomics with GoliathOmics.
+#
+#   docker compose up -d db                 # PostgreSQL 19 on 127.0.0.1:${LAB_PG_PORT:-55419}
+#   docker compose run --rm seed            # official GoliathApp + GoliathOmics apply/seed, public ENA sample
+#   docker compose --profile portal up -d portal   # GoliathApp portal (dev mode) on 127.0.0.1:3400
+#   docker compose down -v                  # throw everything away
+#
+# Everything binds to 127.0.0.1. Never point the seed at Neon, a shared server or production.
+
+services:
+  db:
+    image: postgres:19-bookworm
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LAB_PG_SUPERUSER_PASSWORD:-lab_bootstrap_superuser_pw}
+      POSTGRES_DB: postgres
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "127.0.0.1:${LAB_PG_PORT:-55419}:5432"
+    volumes:
+      - lab_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  seed:
+    build:
+      context: .
+      dockerfile: lab/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: ${LAB_PG_SUPERUSER_PASSWORD:-lab_bootstrap_superuser_pw}
+      LAB_DB: goliath_omics_lab
+      GOLIATH_APP_REF_OVERRIDE: ${GOLIATH_APP_REF_OVERRIDE:-}
+      GOLIATH_OMICS_REF_OVERRIDE: ${GOLIATH_OMICS_REF_OVERRIDE:-}
+      SRC_DIR: /lab-src
+      GOLIATH_PORTAL_DB_PASSWORD: ${GOLIATH_PORTAL_DB_PASSWORD:-}
+      LAB_OPERATOR_NAME: ${LAB_OPERATOR_NAME:-Academy Lab Operator}
+      LAB_OPERATOR_EMAIL: ${LAB_OPERATOR_EMAIL:-operator@academy-lab.invalid}
+    volumes:
+      - ./lab:/course/lab:ro
+      - lab_src:/lab-src
+    profiles: ["seed"]
+
+  portal:
+    image: node:22-bookworm
+    depends_on:
+      db:
+        condition: service_healthy
+    working_dir: /lab-src
+    entrypoint: ["bash", "/course/lab/portal.sh"]
+    environment:
+      SRC_DIR: /lab-src
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: goliath_omics_lab
+      PGSSLMODE: disable
+      GOLIATH_PORTAL_PASSWORD: ${GOLIATH_PORTAL_DB_PASSWORD:-}
+      GOLIATH_PLATFORM_HOST_DEV_LOGIN: "1"
+      GOLIATH_P1_DEV_LOGIN_USER_ID: "1"
+      GOLIATH_PLATFORM_HOST_DEV_LOGIN_SECRET: ${GOLIATH_PLATFORM_HOST_DEV_LOGIN_SECRET:-}
+    ports:
+      - "127.0.0.1:${LAB_PORTAL_PORT:-3400}:3400"
+    volumes:
+      - ./lab:/course/lab:ro
+      - lab_src:/lab-src
+    profiles: ["portal"]
+
+volumes:
+  lab_pgdata:
+  lab_src:

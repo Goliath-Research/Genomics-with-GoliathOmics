@@ -1,0 +1,16 @@
+{
+  "description": "First 1,000 read pairs of public ENA run SRR28293403 (WGBS, HG00621 lymphoblastoid cell line). Records 1-1000 of each mate file, unmodified, re-gzipped with gzip -n -9.",
+  "run_accession": "SRR28293403",
+  "sample_accession": "SAMN40381571",
+  "sample_title": "WGBS-HG00621-Rep1",
+  "study": {"geo": "GSE261315", "bioproject": "PRJNA1086543"},
+  "instrument_model": "Illumina NovaSeq 6000",
+  "library_strategy": "Bisulfite-Seq",
+  "full_run": {"read_count": 158106440, "fastq_bytes": [10866923440, 10538539185], "fastq_md5": ["53979065692049b240901cf61e048823", "bc8002473f8ed6a9c3493555792b2dc3"]},
+  "metadata_source": "https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR28293403&result=read_run&fields=sample_accession,sample_alias,fastq_bytes,fastq_md5,fastq_ftp,read_count,instrument_model,library_strategy&format=tsv",
+  "retrieved": "2026-11-22",
+  "files": [
+    {"file": "SRR28293403_1.first1000.fastq.gz", "mate": 1, "records": 1000, "sha256": "42d57e53af6d77bdbc71eab4b648fdb43aef6a9b914dd2bbe2544d9c4036200d", "source_url": "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR282/003/SRR28293403/SRR28293403_1.fastq.gz"},
+    {"file": "SRR28293403_2.first1000.fastq.gz", "mate": 2, "records": 1000, "sha256": "c7fa02e932a33ddf6d6cc28b737060c0c9e6a77175c7c6cbf14a9831a82649d0", "source_url": "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR282/003/SRR28293403/SRR28293403_2.fastq.gz"}
+  ]
+}

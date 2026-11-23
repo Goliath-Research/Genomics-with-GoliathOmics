@@ -1,0 +1,29 @@
+[project]
+name = "genomics-with-goliathomics"
+version = "0.1.0"
+description = "Genomics with GoliathOmics: From Specimen to Evidence — Goliath Research Academy"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dependencies = [
+    "marimo>=0.11.0",
+    "psycopg[binary]>=3.2.0",
+    "numpy>=1.26",
+    "pandas>=2.2.0",
+    "h5py>=3.10",
+    "pydantic>=2.6",
+    "pytest>=8.3.0",
+]
+
+[project.optional-dependencies]
+# Real BAM/CRAM handling in Modules 4-6 (Linux/macOS).
+bio = ["pysam>=0.22"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = ["live: needs the lab database (GOLIATH_LAB_DSN) or the local portal"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
