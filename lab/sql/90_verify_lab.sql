@@ -63,6 +63,28 @@ BEGIN
     EXECUTE 'SELECT count(*) FROM omics_clinical.fn_utc_timestamp_violations()' INTO n;
     IF n <> 0 THEN RAISE EXCEPTION 'omics_clinical.fn_utc_timestamp_violations() lists % object(s)', n; END IF;
   END IF;
+  -- Runs and alignments (GoliathOmics #119): the writers are class methods, the engine hook is
+  -- enabled, and every successful source step has exactly one object (0 = 0 in a fresh lab).
+  SELECT count(*) INTO n
+  FROM "Meta"."Methods" m JOIN "Meta"."Classes" c ON c."ID" = m."ClassID"
+  WHERE (c."Name", m."Name", m."ImplRef") IN (
+    ('omics/SequencingRun', 'RecordFromNodeExecution', 'omics_clinical.sp_sequencing_run_record'),
+    ('omics/AlignmentResult', 'RecordFromNodeExecution', 'omics_clinical.sp_alignment_result_record'),
+    ('omics/SequencingRun', 'Backfill', 'omics_clinical.sp_run_alignment_backfill'),
+    ('omics/AlignmentResult', 'Backfill', 'omics_clinical.sp_run_alignment_backfill'));
+  IF n <> 4 THEN RAISE EXCEPTION 'expected 4 run/alignment writer methods, found % (needs GoliathOmics #119)', n; END IF;
+  SELECT count(*) INTO n FROM pg_trigger
+  WHERE tgrelid = 'wf.node_execution'::regclass AND tgname = 'trg_omics_node_execution_meta_objects' AND tgenabled = 'O';
+  IF n <> 1 THEN RAISE EXCEPTION 'run/alignment engine hook missing or disabled'; END IF;
+  SELECT count(*) INTO n FROM omics_clinical.v_run_alignment_pending;
+  IF n <> 0 THEN RAISE EXCEPTION '% successful step(s) have no run/alignment object; run the backfill', n; END IF;
+  SELECT count(*) INTO n
+  FROM omics_clinical.wf_meta_object_link l
+  LEFT JOIN "Meta"."Objs" o ON o."ID" = l.meta_obj_id
+  LEFT JOIN "Meta"."Classes" c ON c."ID" = o."ClassID"
+  WHERE c."Name" IS DISTINCT FROM l.class_name;
+  IF n <> 0 THEN RAISE EXCEPTION '% run/alignment link(s) point at a missing or wrong-class object', n; END IF;
+
   -- Every timestamp column is an absolute instant (timestamptz), including the release ledgers.
   SELECT count(*) INTO n
   FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid JOIN pg_namespace ns ON ns.oid = c.relnamespace
@@ -79,4 +101,6 @@ UNION ALL SELECT 'workflow definitions', count(*)::text FROM wf.workflow_def
 UNION ALL SELECT 'published analytes', count(*)::text FROM cfg.analyte WHERE status = 'published'
 UNION ALL SELECT 'assay procedures', count(*)::text FROM cfg.assay_procedure
 UNION ALL SELECT 'public patients', count(*)::text FROM portal."Patients"
-UNION ALL SELECT 'public samples', count(*)::text FROM portal."Samples";
+UNION ALL SELECT 'public samples', count(*)::text FROM portal."Samples"
+UNION ALL SELECT 'sequencing runs', count(*)::text FROM omics_clinical.wf_meta_object_link WHERE class_name = 'omics/SequencingRun'
+UNION ALL SELECT 'alignment results', count(*)::text FROM omics_clinical.wf_meta_object_link WHERE class_name = 'omics/AlignmentResult';

@@ -26,8 +26,28 @@ UNION ALL SELECT 'external_identity_link_audit', count(*) FROM portal.external_i
 -- 5. Clinical writes and the Meta mirror switch
 SELECT entity_code, dual_write_legacy_meta, read_from_meta FROM omics_clinical.meta_cutover_flag ORDER BY 1;
 
--- 6. Registered but unpopulated classes
-SELECT c."Name", count(o."ID") AS objects
-FROM "Meta"."Classes" c LEFT JOIN "Meta"."Objs" o ON o."ClassID" = c."ID"
+-- 6. Runs and alignments as Meta objects (GoliathOmics #119)
+-- 6a. The writers are class methods
+SELECT c."Name" AS class, m."Name" AS method, m."ImplKind", m."ImplRef"
+FROM "Meta"."Methods" m JOIN "Meta"."Classes" c ON c."ID" = m."ClassID"
 WHERE c."Name" IN ('omics/SequencingRun', 'omics/AlignmentResult')
+ORDER BY 1, 2;
+-- 6b. Which actions produce which class
+SELECT action_name, class_name FROM omics_clinical.wf_meta_object_source ORDER BY class_name, action_name;
+-- 6c. The engine hook
+SELECT tgname, tgenabled FROM pg_trigger
+WHERE tgrelid = 'wf.node_execution'::regclass AND tgname = 'trg_omics_node_execution_meta_objects';
+-- 6d. Objects vs successful source steps (equal; 0 = 0 in a fresh lab)
+SELECT s.class_name,
+       count(DISTINCT ne.id) AS source_steps,
+       (SELECT count(*) FROM omics_clinical.wf_meta_object_link l WHERE l.class_name = s.class_name) AS objects
+FROM omics_clinical.wf_meta_object_source s
+LEFT JOIN wf.workflow_action wa ON wa.action_name = s.action_name
+LEFT JOIN wf.workflow_node n ON n.workflow_action_id = wa.id
+LEFT JOIN wf.node_execution ne ON ne.workflow_node_id = n.id AND ne.status = 'SUCCEEDED'
 GROUP BY 1 ORDER BY 1;
+SELECT count(*) AS pending FROM omics_clinical.v_run_alignment_pending;
+-- 6e. Backfill dry run: what the official backfill would create now (nothing is kept)
+BEGIN;
+SELECT * FROM omics_clinical.sp_run_alignment_backfill();
+ROLLBACK;

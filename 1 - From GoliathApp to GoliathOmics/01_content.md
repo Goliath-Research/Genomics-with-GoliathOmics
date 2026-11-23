@@ -56,8 +56,11 @@ flowchart LR
   PO --> I["omics/Institution"]
 ```
 
-Expected in the lab: **11** `omics/*` classes. Two of them, `omics/SequencingRun` and
-`omics/AlignmentResult`, are registered but **not populated** by any action today (Module 9).
+Expected in the lab: **11** `omics/*` classes. `omics/SequencingRun` and `omics/AlignmentResult`
+are filled from the execution record. Each successful FASTQ ingest step (`sample.download_fastq`)
+records one `omics/SequencingRun`. Each successful alignment step records one
+`omics/AlignmentResult` that links to its run, sample, study and BAM. The writers are class methods
+on those two classes (GoliathOmics #119; Module 9).
 
 ## Lab sequence
 

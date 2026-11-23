@@ -89,3 +89,17 @@ def test_claim_gate_blocks_claims_before_pivotal(omics_src: Path):
         with pytest.raises(ValueError):
             RegulatoryLifecycleConfig(stage=stage, allow_clinical_performance_claims=True)
     assert RegulatoryLifecycleConfig(stage="pivotal_validation", allow_clinical_performance_claims=True)
+
+
+def test_module_9_run_alignment_sources_match_schema(omics_src: Path):
+    """Module 9's table of steps that produce runs/alignments matches the pinned seed."""
+    import re
+
+    sql = (omics_src / "database" / "schema" / "22_omics_run_alignment_objects.sql").read_text()
+    seeded = set(re.findall(r"\('(sample\.[a-z0-9_]+)',\s*'(omics/(?:SequencingRun|AlignmentResult))'", sql))
+    assert seeded, "no wf_meta_object_source seed rows found"
+    folder = next(p for p in (Path(__file__).resolve().parents[1]).iterdir() if p.name.startswith("9 - "))
+    text = (folder / "09_content.md").read_text()
+    for action, cls in seeded:
+        row = next((ln for ln in text.splitlines() if ln.startswith("|") and cls in ln and action.split(".", 1)[1] in ln), None)
+        assert row, f"module 9 does not list {action} -> {cls}"
