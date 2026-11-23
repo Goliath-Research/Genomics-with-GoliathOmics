@@ -27,3 +27,6 @@ markers = ["live: needs the lab database (GOLIATH_LAB_DSN) or the local portal"]
 [tool.ruff]
 line-length = 110
 target-version = "py311"
+
+[tool.setuptools]
+py-modules = ["course_lab"]
