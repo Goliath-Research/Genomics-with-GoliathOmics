@@ -49,26 +49,27 @@ BEGIN
   WHERE r."Name" = 'organization_admin' AND t."NodePath" = '/app/omics/patients';
   IF n < 1 THEN RAISE EXCEPTION 'organization_admin has no /app/omics/patients nav grant'; END IF;
 
-  -- History and UTC (GoliathApp #109-#113, GoliathOmics #116-#117): ledgers verify clean and no
+  -- History and UTC (GoliathApp #109-#113, GoliathOmics #116-#118): ledgers verify clean and no
   -- timestamp default or function stores a UTC wall clock. Skipped on an older pin.
   IF to_regprocedure('portal.fn_ledger_verify_all()') IS NOT NULL THEN
     EXECUTE 'SELECT count(*) FROM portal.fn_ledger_verify_all()' INTO n;
     IF n <> 0 THEN RAISE EXCEPTION 'portal.fn_ledger_verify_all() reports % problem(s)', n; END IF;
   END IF;
   IF to_regprocedure('portal.fn_utc_timestamp_violations()') IS NOT NULL THEN
-    -- Known GoliathOmics gap: the release-bundle apply scripts (apply_goliathapp_schema.sh,
-    -- apply_omics_schema.sh) record releases in wf.schema_release / wf.omics_schema_release with a
-    -- zoneless applied_at_utc column. Production applies with apply_domain_schema.sh and has
-    -- neither table. Every other object must pass.
-    EXECUTE $q$SELECT count(*) FROM portal.fn_utc_timestamp_violations()
-             WHERE object_name NOT IN ('wf.schema_release.applied_at_utc',
-                                       'wf.omics_schema_release.applied_at_utc')$q$ INTO n;
+    EXECUTE 'SELECT count(*) FROM portal.fn_utc_timestamp_violations()' INTO n;
     IF n <> 0 THEN RAISE EXCEPTION 'portal.fn_utc_timestamp_violations() lists % object(s)', n; END IF;
   END IF;
   IF to_regprocedure('omics_clinical.fn_utc_timestamp_violations()') IS NOT NULL THEN
     EXECUTE 'SELECT count(*) FROM omics_clinical.fn_utc_timestamp_violations()' INTO n;
     IF n <> 0 THEN RAISE EXCEPTION 'omics_clinical.fn_utc_timestamp_violations() lists % object(s)', n; END IF;
   END IF;
+  -- Every timestamp column is an absolute instant (timestamptz), including the release ledgers.
+  SELECT count(*) INTO n
+  FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid JOIN pg_namespace ns ON ns.oid = c.relnamespace
+  WHERE c.relkind IN ('r', 'p') AND a.attnum > 0 AND NOT a.attisdropped
+    AND a.atttypid = 'timestamp'::regtype
+    AND ns.nspname NOT IN ('pg_catalog', 'information_schema') AND ns.nspname NOT LIKE 'pg_toast%';
+  IF n <> 0 THEN RAISE EXCEPTION '% timestamp column(s) without time zone remain', n; END IF;
 END
 $verify$;
 

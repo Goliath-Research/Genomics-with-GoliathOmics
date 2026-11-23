@@ -97,7 +97,7 @@ SELECT now(), (now() AT TIME ZONE 'utc')::timestamptz AS default_expression;
 `now() AT TIME ZONE 'utc'` is a zoneless UTC wall clock. Written into a `timestamptz` column it is
 read back in the session's zone, so it stored the correct instant only when the session was UTC
 (Neon's default, and the course's Docker database); anywhere else it shifted by the offset. Older
-platform tables defaulted `created_at_utc` that way. GoliathApp #113 and GoliathOmics #117 fixed
+platform tables defaulted `created_at_utc` that way. GoliathApp #113 and GoliathOmics #117 (with #118 for the release ledgers) fixed
 it: every default and write is now `now()`, a true instant, and existing databases have their
 defaults rewritten. Check it in the pinned lab, from a session far from UTC:
 
@@ -122,7 +122,6 @@ Use the lab to confirm each item, then place it in `part11_gap_matrix.md`:
 | workflow runs, node executions, run history on definition delete | kept: H3 `wf.run_history` + retention (GoliathApp #111, merged) | done |
 | JSONL action logs on `/work` | files, not tamper-evident | not covered by H1–H4 yet |
 | seed scripts | write without `god_architect_audit` rows | GoliathApp seed audit |
-| release records `wf.schema_release` / `wf.omics_schema_release` (release-bundle apply only, as in this lab) | `applied_at_utc` is a zoneless UTC wall clock (`90_verify_lab.sql` tolerates exactly these two) | GoliathOmics follow-up to make them `timestamptz` |
 | sign-off of validation evidence | H4 `portal.sp_session_sign` (GoliathApp #112, merged), API only | portal signing screen (follow-up) |
 
 ## 12.6 The evidence package
