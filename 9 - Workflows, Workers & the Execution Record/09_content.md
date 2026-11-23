@@ -60,29 +60,31 @@ when nothing that matters changed.
 ## 9.4 Where the record has gaps today, and what is changing
 
 David's requirement is **history must exist, with no gaps**. GoliathApp is closing the platform
-side in a stack of pull requests (`docs/history-and-audit.md`):
+side with a stack of pull requests, now merged (`docs/history-and-audit.md`):
 
-| Slice | Adds | Status (Nov 22, 2026) |
+| Slice | Adds | Status |
 |---|---|---|
-| H1 ledger core | append-only, hash-chained ledgers for the `portal.*_audit` tables, `"Onboarding"."AuditLog"`, `wf.event`, `wf.event_delivery`; `fn_ledger_verify`, `fn_ledger_verify_all`, `fn_ledger_checkpoint` | GoliathApp PR #109, open |
-| H2 Meta object history | `"Meta"."ObjValuesHistory"` | GoliathApp PR #110 (open) |
-| H3 run history and retention | run-history ledger, no cascading deletes of runs, `platform/RetentionPolicy` with tombstones | GoliathApp PR #111 (open) |
-| H4 electronic signatures | `platform/ElectronicSignature` | GoliathApp PR #112 (open) |
+| H1 ledger core | append-only, hash-chained ledgers for the `portal.*_audit` tables, `"Onboarding"."AuditLog"`, `wf.event`, `wf.event_delivery`; `fn_ledger_verify`, `fn_ledger_verify_all`, `fn_ledger_checkpoint` | GoliathApp PR #109, merged |
+| H2 Meta object history | `"Meta"."ObjValuesHistory"` | GoliathApp PR #110, merged |
+| H3 run history and retention | run-history ledger, no cascading deletes of runs, `platform/RetentionPolicy` with tombstones | GoliathApp PR #111, merged |
+| H4 electronic signatures | `platform/ElectronicSignature` | GoliathApp PR #112, merged |
+| UTC timestamps | every `*_at_utc` default and write is a true instant in any session time zone | GoliathApp PR #113, merged |
 
-Gaps you can see in the lab right now (the exercise below makes you find them):
+Gaps that remain (the exercise below makes you find them):
 
 * `cfg.study_start_request` changes status in place (`queued` → `failed`/`succeeded`); earlier
   states are overwritten.
-* GoliathOmics clinical writes (`omics.patient.create`, …) go to `portal."Patients"` etc. No audit
-  table receives a row, and the Meta mirror is updated only when the dual-write flag is on
-  (`omics_clinical.meta_cutover_flag`, all `false` in a fresh database) or by backfill.
+* GoliathOmics clinical writes (`omics.patient.create`, …) go to `portal."Patients"` etc. The Meta
+  mirror is updated only when the dual-write flag is on (`omics_clinical.meta_cutover_flag`, all
+  `false` in a fresh database) or by backfill; since GoliathOmics #116 every change is kept in
+  `omics_clinical.record_history`.
 * `omics/SequencingRun` and `omics/AlignmentResult` are registered classes with no writer; run and
   alignment facts live in `wf` rows and files.
 * The JSONL logs are append-only by convention, not tamper-evident.
 
-Module 12 builds the evidence package on the H1–H4 features as they merge and lists what still
-needs a GoliathOmics change. The first one is GoliathOmics PR #116 (open), which keeps a history
-of every change to the relational clinical tables and registers it as an H1 ledger.
+Module 12 builds the evidence package on the H1–H4 features and lists what still needs a change.
+GoliathOmics PR #116 (merged) keeps a history of every change to the relational clinical tables
+and registers it as an H1 ledger; GoliathOmics PR #117 (merged) applies the UTC rule to Omics.
 
 ## Lab sequence
 

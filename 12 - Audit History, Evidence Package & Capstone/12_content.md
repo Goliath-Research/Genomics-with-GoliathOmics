@@ -4,12 +4,13 @@
 
 **Files:** `12_ledger_drill.sql` · `part11_gap_matrix.md` · `evidence_package_template.md`
 
-> **Status.** This module teaches GoliathApp's history features as they land. **H1**, the
-> append-only hash-chained ledger, is GoliathApp PR #109. **H2** (ObjValuesHistory) is #110,
-> **H3** (workflow run history and retention) is #111 and **H4** (electronic signatures) is #112.
-> They are stacked, open and not merged. GoliathOmics PR #116 (open) adds clinical record history
-> on top of H1. Each lab step checks for the feature
-> first and says SKIP when the pinned GoliathApp does not have it.
+> **Status.** This module teaches GoliathApp's history features, all merged into GoliathApp `main`:
+> **H1**, the append-only hash-chained ledger, is GoliathApp PR #109. **H2** (ObjValuesHistory) is
+> #110, **H3** (workflow run history and retention) is #111 and **H4** (electronic signatures) is
+> #112. GoliathApp #113 then stored every timestamp as UTC whatever the session time zone.
+> GoliathOmics #116 (merged) adds clinical record history on top of H1, and GoliathOmics #117 applies
+> the UTC rule to Omics. The lab pins both merged `main` commits (`lab/pins.env`). Each lab step
+> still checks for the feature first and says SKIP on an older pin.
 
 > **Claim boundary.** You are assembling evidence *toward* 21 CFR Part 11 and a premarket
 > submission. Nothing here makes GoliathOmics "Part 11 compliant" or cleared.
@@ -58,22 +59,21 @@ reports `hash_mismatch`.
 still change bytes; the chain makes it visible. That is why checkpoints are exported and kept
 (and, with H4, signed) outside the database.
 
-To try it before H1 merges, rebuild the disposable lab on the PR head (this replaces your lab):
+The pinned lab has H1–H4. Before they merged, the course was checked against the PR #109 head
+`ec9f0da` and the #112 head: the official apply and seed scripts ran unchanged,
+`fn_ledger_verify_all()` returned no problems, the ledgers include `meta.obj_values_history` (with
+baseline rows for every seeded Meta object) and `wf.run_history`, and the drill detected the
+owner's edit as `hash_mismatch`. To rebuild the disposable lab on another GoliathApp commit (this
+replaces your lab):
 
 ```bash
 python course_lab.py down
-GOLIATH_APP_REF_OVERRIDE=<GoliathApp PR #109 head commit> python course_lab.py up
+GOLIATH_APP_REF_OVERRIDE=<GoliathApp commit> python course_lab.py up
 ```
-
-The course was checked this way against PR #109 head `ec9f0da`: the official apply and seed
-scripts ran unchanged, `fn_ledger_verify_all()` returned no problems, and the drill detected the
-owner's edit as `hash_mismatch`. It was also checked against the #112 head, which contains H1–H4:
-the ledgers include `meta.obj_values_history` (with baseline rows for every seeded Meta object)
-and `wf.run_history`, and `fn_ledger_verify_all()` returned no problems.
 
 ## 12.3b H2–H4 and clinical history in the lab
 
-On a lab built from the #112 head, and with GoliathOmics #116 applied:
+In the pinned lab (GoliathApp H1–H4 and GoliathOmics #116):
 
 ```sql
 SELECT ledger_name, last_seq FROM portal.fn_ledger_checkpoint() ORDER BY 1;
@@ -94,25 +94,35 @@ SET TimeZone = 'America/New_York';
 SELECT now(), (now() AT TIME ZONE 'utc')::timestamptz AS default_expression;
 ```
 
-Many platform tables default `created_at_utc` to `now() AT TIME ZONE 'utc'` on a `timestamptz`
-column. That stores the correct instant only when the session time zone is UTC (Neon's default,
-and the course's Docker database). On a server set to another zone the value shifts by the
-offset. Write it down as a finding: 11.10(e) needs a time-stamp you can trust without knowing the
-server's settings. The course compose file pins the database to UTC.
+`now() AT TIME ZONE 'utc'` is a zoneless UTC wall clock. Written into a `timestamptz` column it is
+read back in the session's zone, so it stored the correct instant only when the session was UTC
+(Neon's default, and the course's Docker database); anywhere else it shifted by the offset. Older
+platform tables defaulted `created_at_utc` that way. GoliathApp #113 and GoliathOmics #117 fixed
+it: every default and write is now `now()`, a true instant, and existing databases have their
+defaults rewritten. Check it in the pinned lab, from a session far from UTC:
 
-## 12.5 What is not in a ledger yet
+```sql
+SET TimeZone = 'Pacific/Kiritimati';
+SELECT count(*) FROM portal.fn_utc_timestamp_violations();          -- 0
+SELECT count(*) FROM omics_clinical.fn_utc_timestamp_violations();   -- 0
+```
+
+The finding for 11.10(e) is closed: a time-stamp you can trust without knowing the server's
+settings. The course compose file still pins the database to UTC.
+
+## 12.5 What is in a ledger, and what is not yet
 
 Use the lab to confirm each item, then place it in `part11_gap_matrix.md`:
 
 | Record | Today | Closes with |
 |---|---|---|
-| Meta object values (`omics/*` objects) | current value only | H2 ObjValuesHistory (GoliathApp #110) |
-| relational clinical tables (`portal."Patients"`, `"Samples"`, ...; Meta dual-write flags are all false) | updated in place, no audit row | `omics_clinical.record_history` (GoliathOmics #116) |
+| Meta object values (`omics/*` objects) | kept: H2 ObjValuesHistory (GoliathApp #110, merged) | done |
+| relational clinical tables (`portal."Patients"`, `"Samples"`, ...; Meta dual-write flags are all false) | kept: `omics_clinical.record_history` (GoliathOmics #116, merged) | done |
 | `cfg.study_start_request.status` (a GoliathApp table) | updated in place (queued → failed) | not covered by H1–H4 yet |
-| workflow runs, node executions, run history on definition delete | cascade delete | H3 `wf.run_history` + retention (GoliathApp #111) |
+| workflow runs, node executions, run history on definition delete | kept: H3 `wf.run_history` + retention (GoliathApp #111, merged) | done |
 | JSONL action logs on `/work` | files, not tamper-evident | not covered by H1–H4 yet |
 | seed scripts | write without `god_architect_audit` rows | GoliathApp seed audit |
-| sign-off of validation evidence | none | H4 `portal.sp_session_sign` (GoliathApp #112; portal UI is a follow-up) |
+| sign-off of validation evidence | H4 `portal.sp_session_sign` (GoliathApp #112, merged), API only | portal signing screen (follow-up) |
 
 ## 12.6 The evidence package
 

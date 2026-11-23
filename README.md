@@ -6,11 +6,11 @@
 > and the lab are written. The lab is a disposable PostgreSQL 19 database seeded with the
 > official GoliathApp and GoliathOmics apply and seed scripts, plus the GoliathApp portal run
 > locally in dev mode. It was verified end to end on PostgreSQL 19 with the portal: navigation
-> and the semantic lists show the public ENA rows. The lab pins a GoliathOmics commit that
-> includes two open fixes (GoliathOmics PRs #113 and #115); the pin moves to `main` when they
-> merge. Module 12 teaches GoliathApp's history features from the open GoliathApp PRs #109–#112
-> (ledgers, Meta object history, run history and retention, e-signatures) and GoliathOmics PR
-> #116 (clinical record history), and checks for each feature before using it. The only biological data is public ENA run
+> and the semantic lists show the public ENA rows. The lab pins GoliathApp and GoliathOmics `main`
+> commits that include the merged history work: GoliathApp #109–#112 (ledgers, Meta object
+> history, run history and retention, e-signatures) and #113 (UTC timestamps), and GoliathOmics
+> #113 and #115 (catalog kinds, omics permissions), #116 (clinical record history) and #117 (UTC
+> timestamps). Module 12 teaches those features and checks for each one before using it. The only biological data is public ENA run
 > SRR28293403 (HG00621). GoliathOmics is not FDA-cleared or approved, and this course does not
 > claim it complies with 21 CFR Part 11.
 

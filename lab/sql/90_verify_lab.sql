@@ -48,6 +48,21 @@ BEGIN
   JOIN "RBAC"."Roles" r ON r."ID" = rn."RoleId"
   WHERE r."Name" = 'organization_admin' AND t."NodePath" = '/app/omics/patients';
   IF n < 1 THEN RAISE EXCEPTION 'organization_admin has no /app/omics/patients nav grant'; END IF;
+
+  -- History and UTC (GoliathApp #109-#113, GoliathOmics #116-#117): ledgers verify clean and no
+  -- timestamp default or function stores a UTC wall clock. Skipped on an older pin.
+  IF to_regprocedure('portal.fn_ledger_verify_all()') IS NOT NULL THEN
+    EXECUTE 'SELECT count(*) FROM portal.fn_ledger_verify_all()' INTO n;
+    IF n <> 0 THEN RAISE EXCEPTION 'portal.fn_ledger_verify_all() reports % problem(s)', n; END IF;
+  END IF;
+  IF to_regprocedure('portal.fn_utc_timestamp_violations()') IS NOT NULL THEN
+    EXECUTE 'SELECT count(*) FROM portal.fn_utc_timestamp_violations()' INTO n;
+    IF n <> 0 THEN RAISE EXCEPTION 'portal.fn_utc_timestamp_violations() lists % object(s)', n; END IF;
+  END IF;
+  IF to_regprocedure('omics_clinical.fn_utc_timestamp_violations()') IS NOT NULL THEN
+    EXECUTE 'SELECT count(*) FROM omics_clinical.fn_utc_timestamp_violations()' INTO n;
+    IF n <> 0 THEN RAISE EXCEPTION 'omics_clinical.fn_utc_timestamp_violations() lists % object(s)', n; END IF;
+  END IF;
 END
 $verify$;
 
