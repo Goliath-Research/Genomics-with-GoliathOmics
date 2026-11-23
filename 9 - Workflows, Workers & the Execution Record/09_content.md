@@ -78,9 +78,54 @@ Gaps that remain (the exercise below makes you find them):
   mirror is updated only when the dual-write flag is on (`omics_clinical.meta_cutover_flag`, all
   `false` in a fresh database) or by backfill; since GoliathOmics #116 every change is kept in
   `omics_clinical.record_history`.
-* `omics/SequencingRun` and `omics/AlignmentResult` are registered classes with no writer; run and
-  alignment facts live in `wf` rows and files.
 * The JSONL logs are append-only by convention, not tamper-evident.
+
+## Runs and alignments as Meta objects
+
+GoliathOmics #119 turns two kinds of `wf.node_execution` row into Meta objects. Nobody types JSON:
+the objects come from the workflow engine.
+
+| Source step (status `SUCCEEDED`) | Object | Main fields |
+|---|---|---|
+| `sample.download_fastq` | `omics/SequencingRun` | `run_accession` (only when every FASTQ name agrees on one SRR/ERR/DRR), `fastq_files`, `fastq_count`, `ingested_at_utc` |
+| `sample.parabricks_fq2bam`, `parabricks_rna_fq2bam`, `parabricks_giraffe`, `docker_align`, `methylgrapher_wgbs_align` | `omics/AlignmentResult` | `sequencing_run_id`, `aligner_action`, `align_engine`, `bam_path`, `output_dir`, `qc_metrics_path`, `completed_at_utc` |
+
+Every object also carries:
+- `source_node_execution_id` and `workflow_instance_id`, pointing back to the step that produced it.
+- `sample_name`, with `sample_id` → `omics/Sample` when `portal."Samples"` has that name.
+- `study_id` → `omics/Study` when `cfg.study_instance_link` ties the instance to a study.
+
+A link that is not known stays out of the document; nothing is invented.
+
+The table `omics_clinical.wf_meta_object_source` lists which actions produce which class. You
+add a new aligner by adding a row there, not by changing code.
+
+How it is written:
+
+* **Writers are class methods.** `"Meta"."Methods"` lists:
+  * `omics/SequencingRun.RecordFromNodeExecution` → `omics_clinical.sp_sequencing_run_record`
+  * `omics/AlignmentResult.RecordFromNodeExecution` → `omics_clinical.sp_alignment_result_record`
+  * `Backfill` on both classes → `omics_clinical.sp_run_alignment_backfill`
+
+  They write through `"Meta".sp_obj_insert` / `sp_obj_update`, so H2
+  (`"Meta"."ObjValuesHistory"`) records `object.create`, `values.insert` / `values.update` and
+  `object.scope`. Objects are scoped like their study.
+* **Engine hook.** An AFTER trigger on `wf.node_execution` calls the writer when a step becomes
+  `SUCCEEDED`. A writer error is only a WARNING: it never fails the engine. The step stays in
+  `omics_clinical.v_run_alignment_pending` until someone runs the backfill.
+* **Idempotent per step.** `omics_clinical.wf_meta_object_link` has primary key
+  (`source_node_execution_id`, `class_name`) and keeps a SHA-256 of the document. A rerun with the
+  same facts writes nothing and adds no history row. A changed fact updates the same object. The
+  link table is itself tracked in `omics_clinical.record_history`. It has no foreign key to the
+  step, so H3 run retention can purge a run and keep the object.
+* **Backfill.** `scripts/omics_run_alignment_backfill.sh` does a dry run by default and commits
+  with `--apply`. It prints `source_rows`, `created` and `updated` per class. A second `--apply`
+  reports `created=0 updated=0`.
+
+A fresh lab has no successful steps (the drain below fails on purpose), so both classes have **0**
+objects and **0** source rows. Those numbers matching is the check. On the platform database (23 Nov 2026) the
+backfill derived 6 runs and 6 alignments from the six migrated SamplePrepPipeline instances; a second
+pass created and updated nothing.
 
 Module 12 builds the evidence package on the H1–H4 features and lists what still needs a change.
 GoliathOmics PR #116 (merged) keeps a history of every change to the relational clinical tables
@@ -103,16 +148,22 @@ Run `09_execution_record.sql` (`python course_lab.py sql "9 - Workflows, Workers
    `queued` state?
 4. Audit tables: `portal.session_active_role_audit` gains a row each time the portal smoke signs
    in; the clinical tables gain no audit row when the importer writes a patient.
+5. Clinical writes and the Meta mirror switch.
+6. Runs and alignments: the writer methods on both classes, the engine hook, and objects equal to
+   successful source steps (0 = 0 in a fresh lab). The backfill dry run creates nothing.
 
 ## Practice
 
 * Which table would tell you which worker ran a step, and which file would tell you the input
   checksums?
-* Name two facts about a run that live only in files today.
+* Name two facts about a run that live only in files today. (The BAM path and the run accession
+  are now on the Meta objects; the checksums and tool logs are not.)
+* Which table would you change to make a new aligner action produce `omics/AlignmentResult`
+  objects, and which script would record its past successful steps?
 
 ## Evidence to submit
 
-* Query output for steps 1, 2 and 4, and the request row after your drain attempt.
+* Query output for steps 1, 2, 4 and 6, and the request row after your drain attempt.
 * A list of the gaps you found, each mapped to H1, H2, H3, H4 or "needs a GoliathOmics change".
 
 ## Handoff to Module 10
