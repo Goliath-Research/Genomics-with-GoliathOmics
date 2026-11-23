@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline:
+    name: Guides, notebooks and drift tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install course
+        run: pip install -e .
+      - name: Check out the pinned GoliathOmics for drift tests
+        run: |
+          set -euo pipefail
+          . lab/pins.env
+          git init -q .lab-src/GoliathOmics
+          git -C .lab-src/GoliathOmics fetch -q --depth 1 https://github.com/Goliath-Research/GoliathOmics.git "$GOLIATH_OMICS_REF"
+          git -C .lab-src/GoliathOmics checkout -q FETCH_HEAD
+      - name: Tests (offline)
+        run: pytest -m "not live" -rs
+
+  lab:
+    name: PostgreSQL 19 lab + local portal
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install course
+        run: pip install -e .
+      - name: Generate local lab credentials
+        run: python course_lab.py init
+      - name: Start PostgreSQL 19 and run the official seeds
+        run: python course_lab.py up
+      - name: Lab checks
+        run: python course_lab.py status
+      - name: Live database tests
+        run: python course_lab.py test
+      - name: Start the portal
+        run: python course_lab.py portal
+      - name: Wait for the portal
+        run: |
+          for i in $(seq 1 120); do
+            if curl -fsS http://127.0.0.1:3400/api/health >/dev/null 2>&1; then echo "portal up"; exit 0; fi
+            sleep 10
+          done
+          docker compose --profile portal logs --tail 200 portal
+          exit 1
+      - name: Portal smoke test
+        run: python course_lab.py test --portal
+      - name: Logs on failure
+        if: failure()
+        run: docker compose --profile portal --profile seed logs --tail 300
+      - name: Tear down
+        if: always()
+        run: python course_lab.py down
