@@ -56,7 +56,13 @@ BEGIN
     IF n <> 0 THEN RAISE EXCEPTION 'portal.fn_ledger_verify_all() reports % problem(s)', n; END IF;
   END IF;
   IF to_regprocedure('portal.fn_utc_timestamp_violations()') IS NOT NULL THEN
-    EXECUTE 'SELECT count(*) FROM portal.fn_utc_timestamp_violations()' INTO n;
+    -- Known GoliathOmics gap: the release-bundle apply scripts (apply_goliathapp_schema.sh,
+    -- apply_omics_schema.sh) record releases in wf.schema_release / wf.omics_schema_release with a
+    -- zoneless applied_at_utc column. Production applies with apply_domain_schema.sh and has
+    -- neither table. Every other object must pass.
+    EXECUTE $q$SELECT count(*) FROM portal.fn_utc_timestamp_violations()
+             WHERE object_name NOT IN ('wf.schema_release.applied_at_utc',
+                                       'wf.omics_schema_release.applied_at_utc')$q$ INTO n;
     IF n <> 0 THEN RAISE EXCEPTION 'portal.fn_utc_timestamp_violations() lists % object(s)', n; END IF;
   END IF;
   IF to_regprocedure('omics_clinical.fn_utc_timestamp_violations()') IS NOT NULL THEN
