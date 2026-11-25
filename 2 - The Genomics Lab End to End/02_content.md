@@ -36,7 +36,7 @@ flowchart LR
 | Analyte | What was extracted: cfDNA, buffy coat DNA, tissue, plant tissue | `cfg.analyte` catalog (5 published) |
 | Lab batch, reagent lots | Which samples were processed together, with which lots | `omics/LabBatch` (mirror only), GoliathApp `inv` lots via `13_omics_lab_inv_bridge.sql` |
 | Library, technique | How the material was turned into something a sequencer or mass spectrometer reads | `libraryProtocol` on the assay procedure (Module 3) |
-| Sequencing run | One instrument run | `omics/SequencingRun` is registered but not populated |
+| Sequencing run | One instrument run | `omics/SequencingRun`, recorded from each successful FASTQ ingest step (run accession, FASTQ files, sample, study); its alignment is an `omics/AlignmentResult` (Module 9) |
 | Chain of custody | Collection, receipt, storage events | **Not modeled** (gap, Module 12) |
 
 The same chain applies to every modality. For RNA-seq the analyte is RNA and the output is

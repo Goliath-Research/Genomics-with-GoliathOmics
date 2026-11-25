@@ -65,3 +65,21 @@ def test_portal_smoke():
         pytest.skip("GOLIATH_PORTAL_URL not set")
     res = subprocess.run([sys.executable, str(ROOT / "lab" / "portal_smoke.py")], capture_output=True, text=True, timeout=600)
     assert res.returncode == 0, res.stdout[-3000:] + res.stderr[-3000:]
+
+
+def test_run_alignment_backfill_is_a_noop_in_the_lab():
+    """The official backfill derives objects only from real successful steps: a second pass
+    creates and updates nothing, and objects equal source steps."""
+    psycopg = pytest.importorskip("psycopg")
+    with psycopg.connect(_dsn()) as conn:
+        rows = conn.execute(
+            "SELECT class_name, source_rows, created, updated FROM omics_clinical.sp_run_alignment_backfill()"
+        ).fetchall()
+        assert {r[0] for r in rows} == {"omics/SequencingRun", "omics/AlignmentResult"}
+        assert all(r[2] == 0 and r[3] == 0 for r in rows), rows
+        for cls, source_rows, _, _ in rows:
+            objs = conn.execute(
+                "SELECT count(*) FROM omics_clinical.wf_meta_object_link WHERE class_name = %s", (cls,)
+            ).fetchone()[0]
+            assert objs == source_rows, (cls, objs, source_rows)
+        conn.rollback()
