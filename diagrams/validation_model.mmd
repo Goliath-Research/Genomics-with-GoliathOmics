@@ -1,0 +1,10 @@
+flowchart TD
+  n1(["Start"])
+  n2["validation.select_best_model"]
+  n3["validation.post_model_validation"]
+  n4(["End"])
+  n1 --> n2
+  n2 --> n3
+  n3 --> n4
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n4 terminal

@@ -134,7 +134,9 @@ values.
 ## 12.7 Capstone
 
 1. Choose one documented GoliathOmics scenario other than the worked example (for example
-   RNA-seq with kallisto on tissue, DIA proteomics, or the plant abiotic stress pack).
+   RNA-seq with kallisto on tissue, DIA proteomics, or the plant abiotic stress pack), and include
+   its SamplePrep and Study Lifecycle Mermaid diagrams from [`diagrams/`](../diagrams/README.md)
+   (or the [GoliathOmics DomainProgram catalog](https://goliath-research.github.io/GoliathOmics/workflows/)).
 2. Write its intended use and the likely regulatory route (Module 11), with sources.
 3. Resolve its configuration with provenance (Module 8) and list the QC guardrails that gate it
    (Module 7).

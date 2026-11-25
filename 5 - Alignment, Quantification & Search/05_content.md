@@ -53,7 +53,11 @@ stops; it is never silently re-run on another engine. The lab study in this cour
 | Proteomics | `actionConfig.proteomics_quant.ingest_mode` | `dia` (default) → `sample.diann` (+ `sample.dl_rescore` when `rescore: true`); `dda` → `sample.sage` (CPU); `panel` → `sample.ingest_panel` |
 
 Same pattern every time: a typed configuration value, a derived flag, a branch in the program.
-Adding an engine means a new action and a new value, not a new platform.
+Adding an engine means a new action and a new value, not a new platform. You can trace every branch
+visually in the generated Mermaid flowcharts ([`diagrams/sample_prep.mmd`](../diagrams/sample_prep.mmd),
+[`diagrams/sample_prep_rnaseq.mmd`](../diagrams/sample_prep_rnaseq.mmd),
+[`diagrams/sample_prep_proteomics.mmd`](../diagrams/sample_prep_proteomics.mmd), and the published
+[Sample preparation diagrams](https://goliath-research.github.io/GoliathOmics/workflows/sample-prep/)).
 
 ## 5.4 GPU is a deployment detail
 
@@ -75,8 +79,11 @@ nothing in this course starts one.
    ORDER BY 1;
    ```
 
-3. Open `.lab-src/GoliathOmics/workflow_engine/domain/fixtures/sample_prep_rnaseq.program.json`
-   and find the branch on `useKallisto`.
+3. Trace the `useKallisto?` decision branch in the generated Mermaid diagram
+   ([`diagrams/sample_prep_rnaseq.mmd`](../diagrams/sample_prep_rnaseq.mmd) or the
+   [SamplePrepRnaSeqPipeline diagram](https://goliath-research.github.io/GoliathOmics/workflows/sample-prep/#samplepreprnaseqpipeline),
+   also embedded in Module 3), and compare it with the source JSON at
+   `.lab-src/GoliathOmics/workflow_engine/domain/fixtures/sample_prep_rnaseq.program.json`.
 
 ## Practice
 

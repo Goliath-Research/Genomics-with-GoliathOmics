@@ -33,6 +33,128 @@ and separate **analytical validity** (does the assay measure the analyte correct
 The same ladder applies to RNA-seq and proteomics studies (`rnaseq_research`,
 `proteomics_research` at the research rung); only the feature science differs.
 
+Compare the two core study topologies visually from their generated Mermaid diagrams (all study and
+SaMD lifecycle variants are in [`diagrams/`](../diagrams/README.md) and the published
+[Study and SaMD lifecycles catalog](https://goliath-research.github.io/GoliathOmics/workflows/study-lifecycles/)):
+
+#### Research / Holdout-Enrichment topology (`SaMD_Research` — `diagrams/samd_research.mmd`)
+
+```mermaid
+flowchart TD
+  n1(["Start"])
+  n2["validation.plan_iterations"]
+  subgraph sg_1 ["FOREACH (parallel): seedGroup in centroidSeedGroups x context in project.contexts x chromosome in project.chromosomes"]
+    n3["centroid_seed<br/>pipeline.centroid"]
+  end
+  subgraph sg_2 ["FOREACH (parallel): iteration in iterations"]
+    subgraph sg_3 ["FOREACH (parallel): group in iteration.centroidGroups x context in project.contexts x chromosome in project.chromosomes"]
+      n4["pipeline.centroid"]
+    end
+    subgraph sg_4 ["FOREACH (parallel): comparison in project.comparisons"]
+      subgraph sg_5 ["FOREACH (parallel): context in project.contexts x chromosome in project.chromosomes"]
+        n5["detect<br/>pipeline.detector"]
+        n6{"runDmpSelection?"}
+        n7["pipeline.dmp_select"]
+      end
+      n8["pipeline.mapper"]
+    end
+    n9{"runBiomarkerFilter?"}
+    n10["validation.biomarker_filter"]
+    n11{"runGeneFeaturecuts?"}
+    n12["pipeline.gene_select"]
+  end
+  n13["validation.stability"]
+  n14["readiness<br/>validation.stability_freeze_readiness"]
+  n15(["End"])
+  n1 --> n2
+  n2 --> n3
+  n6 -->|yes| n7
+  n5 --> n6
+  n7 --> n8
+  n6 -->|no| n8
+  n4 --> n5
+  n9 -->|yes| n10
+  n8 --> n9
+  n11 -->|yes| n12
+  n10 --> n11
+  n9 -->|no| n11
+  n3 --> n4
+  n12 --> n13
+  n11 -->|no| n13
+  n13 --> n14
+  n14 --> n15
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n15 terminal
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f
+  class n6,n9,n11 decision
+```
+
+#### Full Study Validation & Pivotal topology (`StudyValidationLifecycle` — `diagrams/study_validation_lifecycle.mmd`)
+
+```mermaid
+flowchart TD
+  n1(["Start"])
+  n2["validation.plan_iterations"]
+  subgraph sg_1 ["FOREACH (parallel): seedGroup in centroidSeedGroups x context in project.contexts x chromosome in project.chromosomes"]
+    n3["centroid_seed<br/>pipeline.centroid"]
+  end
+  subgraph sg_2 ["FOREACH (parallel): iteration in iterations"]
+    subgraph sg_3 ["FOREACH (parallel): group in iteration.centroidGroups x chromosome in project.chromosomes"]
+      n4["pipeline.centroid"]
+    end
+    subgraph sg_4 ["FOREACH (parallel): comparison in project.comparisons x chromosome in project.chromosomes"]
+      n5["detect<br/>pipeline.detector"]
+    end
+  end
+  n6["validation.stability"]
+  n7["readiness<br/>validation.stability_freeze_readiness"]
+  n8["prepare_freeze<br/>validation.prepare_freeze_project"]
+  subgraph sg_5 ["FOREACH (parallel): group in groups x chromosome in project.chromosomes"]
+    n9["freeze_centroid<br/>pipeline.centroid"]
+  end
+  subgraph sg_6 ["FOREACH (parallel): comparison in project.comparisons x chromosome in project.chromosomes"]
+    n10["freeze_detect<br/>pipeline.detector"]
+  end
+  n11["pipeline.mapper"]
+  n12["pipeline.derived_measures"]
+  n13["pipeline.cell_deconvolution"]
+  n14["pipeline.info_measures"]
+  n15["pipeline.enricher"]
+  n16["validation.finalize_freeze_model_bundle"]
+  n17["pipeline.progression"]
+  n18["validation.model_mc"]
+  n19["validation.select_best_model"]
+  n20["validation.post_model_validation"]
+  n21(["End"])
+  n1 --> n2
+  n2 --> n3
+  n4 --> n5
+  n3 --> n4
+  n5 --> n6
+  n6 --> n7
+  n7 --> n8
+  n8 --> n9
+  n9 --> n10
+  n10 --> n11
+  n11 --> n12
+  n12 --> n13
+  n13 --> n14
+  n14 --> n15
+  n15 --> n16
+  n16 --> n17
+  n17 --> n18
+  n18 --> n19
+  n19 --> n20
+  n20 --> n21
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n21 terminal
+```
+
+Additional modality and assay lifecycle diagrams live in `diagrams/` (`study_validation_lifecycle_no_deconv.mmd`,
+`study_validation_lifecycle_residual.mmd`, `study_validation_mhl_survival.mmd`,
+`plant_stress_study_lifecycle.mmd`, `rnaseq_study_lifecycle.mmd`, `proteomics_study_lifecycle.mmd`,
+and `samd_pivotal.mmd`).
+
 ## 10.2 The claim gate is code
 
 `RegulatoryLifecycleConfig` accepts stages `feasibility`, `expanded_development`,

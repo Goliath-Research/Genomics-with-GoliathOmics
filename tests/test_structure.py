@@ -90,3 +90,55 @@ def test_notebook_runs_as_script(nb: Path):
 def test_notebook_passes_marimo_check(nb: Path):
     res = subprocess.run([sys.executable, "-m", "marimo", "check", str(nb)], capture_output=True, text=True, timeout=120)
     assert res.returncode == 0, res.stdout + res.stderr
+
+
+_MERMAID_FENCE_RE = re.compile(r"^```mermaid\s*\n(?P<body>.*?)^```\s*$", re.MULTILINE | re.DOTALL)
+_SUBGRAPH_OPEN_RE = re.compile(r"^\s*subgraph\s+\S+\s+\[")
+_SUBGRAPH_CLOSE_RE = re.compile(r"^\s*end\s*$")
+
+
+def _assert_valid_mermaid(body: str, context: str) -> None:
+    lines = [line for line in body.splitlines() if line.strip()]
+    assert lines, f"{context}: empty mermaid diagram"
+    assert lines[0].startswith(("flowchart ", "graph ", "sequenceDiagram", "erDiagram")), (
+        f"{context}: unexpected mermaid header {lines[0]!r}"
+    )
+    depth = 0
+    for line in lines[1:]:
+        if _SUBGRAPH_OPEN_RE.match(line):
+            depth += 1
+        elif _SUBGRAPH_CLOSE_RE.match(line):
+            depth -= 1
+            assert depth >= 0, f"{context}: unmatched 'end'"
+        if "classDef " not in line:
+            assert ";" not in line, f"{context}: unexpected semicolon in {line!r}"
+    assert depth == 0, f"{context}: unclosed subgraph(s), depth={depth}"
+
+
+def test_diagrams_and_embedded_mermaid_blocks():
+    diagrams_dir = ROOT / "diagrams"
+    assert (diagrams_dir / "README.md").is_file()
+    mmd_files = sorted(diagrams_dir.glob("*.mmd"))
+    assert len(mmd_files) >= 41
+    for mmd in mmd_files:
+        _assert_valid_mermaid(mmd.read_text(encoding="utf-8"), mmd.name)
+
+    for md in [ROOT / "README.md", *(d / f"{int(d.name.split(' - ')[0]):02d}_content.md" for d in module_dirs())]:
+        text = md.read_text(encoding="utf-8")
+        for idx, match in enumerate(_MERMAID_FENCE_RE.finditer(text), start=1):
+            _assert_valid_mermaid(match.group("body"), f"{md.name}#{idx}")
+
+    embedded_pairs = [
+        ("3 - Assays, Analytes & Process Packs/03_content.md", "sample_prep_rnaseq.mmd"),
+        ("3 - Assays, Analytes & Process Packs/03_content.md", "sample_prep_proteomics.mmd"),
+        ("7 - QC at Every Level/07_content.md", "sample_prep_remediate.mmd"),
+        ("9 - Workflows, Workers & the Execution Record/09_content.md", "sample_prep.mmd"),
+        ("9 - Workflows, Workers & the Execution Record/09_content.md", "event_wait_ack.mmd"),
+        ("10 - Studies, Partitions & the Claim Gate/10_content.md", "samd_research.mmd"),
+        ("10 - Studies, Partitions & the Claim Gate/10_content.md", "study_validation_lifecycle.mmd"),
+    ]
+    for md_rel, mmd_name in embedded_pairs:
+        md_text = (ROOT / md_rel).read_text(encoding="utf-8")
+        expected_body = (diagrams_dir / mmd_name).read_text(encoding="utf-8").strip()
+        bodies = [m.group("body").strip() for m in _MERMAID_FENCE_RE.finditer(md_text)]
+        assert expected_body in bodies, f"{md_rel} is out of sync with diagrams/{mmd_name}"

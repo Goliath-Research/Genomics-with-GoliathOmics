@@ -1,0 +1,21 @@
+flowchart TD
+  n1(["Start"])
+  subgraph sg_1 ["FOREACH (sequential): artifactPath in artifactPaths"]
+    n2["stat_path<br/>pathExists = workflow.fs_stat"]
+  end
+  n3["reduce_summary<br/>summary = workflow.const_string"]
+  n4{"pathExists?"}
+  n5["consume_summary<br/>workflow.const_string"]
+  n6["consume_missing<br/>workflow.const_string"]
+  n7(["End"])
+  n1 --> n2
+  n2 --> n3
+  n4 -->|yes| n5
+  n4 -->|no| n6
+  n3 --> n4
+  n5 --> n7
+  n6 --> n7
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n7 terminal
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f
+  class n4 decision

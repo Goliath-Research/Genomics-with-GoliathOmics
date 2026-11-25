@@ -3,6 +3,7 @@
 *Genomics with GoliathOmics · Goliath Research Academy* · [Course syllabus](../README.md)
 
 **Notebook:** `03_in_silico_bisulfite.py` · **Support code:** `module_03_assays.py` ·
+**Diagrams:** [diagrams/README.md](../diagrams/README.md) and [GoliathOmics DomainProgram catalog](https://goliath-research.github.io/GoliathOmics/workflows/) ·
 **Sources:** GoliathOmics `docs/operators/process-packs.md`, `docs/ANALYTE_PROFILES.md`,
 `docs/usage/20-rnaseq-process-pack.md`, `22-proteomics-process-pack.md`,
 `24-methylation-application-packs.md`, `21-…`, `23-…`, `25-prostate-cancer-pack.md`,
@@ -44,6 +45,116 @@ In the lab, `wf.workflow_def` holds all seven deployed definitions:
 `SamplePrepPipeline`, `SamplePrepRemediationPipeline`, `SamplePrepRnaSeqPipeline`,
 `SamplePrepProteomicsPipeline`, `StudyValidationLifecycle`, `RnaSeqStudyLifecycle`,
 `ProteomicsStudyLifecycle`.
+
+Rather than reading raw JSON to compare modalities, inspect their generated Mermaid flowcharts
+(all 41 exported in [`diagrams/`](../diagrams/README.md) and published at
+[GoliathOmics DomainProgram catalog](https://goliath-research.github.io/GoliathOmics/workflows/sample-prep/)).
+Notice how RNA-seq and proteomics share the exact same `FOREACH samples → branch on config → QC gate → archive or fail` shape as methylation (`SamplePrepPipeline`, shown in full in Module 9):
+
+#### RNA-seq SamplePrep (`SamplePrepRnaSeqPipeline` — `diagrams/sample_prep_rnaseq.mmd`)
+
+```mermaid
+flowchart TD
+  n1(["Start"])
+  subgraph sg_1 ["sample_prep_rnaseq - FOREACH (parallel): sample in samples"]
+    n2["sample.download_fastq"]
+    n3{"useKallisto?"}
+    n4["sample.kallisto"]
+    n5["sample.parabricks_rna_fq2bam"]
+    n6["sample.rna_qc"]
+    n7{"qcPass?"}
+    n8["sample.register_expression"]
+    n9["sample.archive_sample<br/>mode=full"]
+    n10{"deleteFastqs?"}
+    n11["sample.delete_fastqs"]
+    n12["archive_sample_qc_only<br/>sample.archive_sample<br/>mode=qc_only"]
+    n13{"deleteFastqs?"}
+    n14["delete_fastqs_fail<br/>sample.delete_fastqs"]
+    n15["rna_qc_failed<br/>sample.qc_failed<br/>reason=rna_qc_failed"]
+  end
+  n16(["End"])
+  n1 --> n2
+  n3 -->|yes| n4
+  n3 -->|no| n5
+  n2 --> n3
+  n4 --> n6
+  n5 --> n6
+  n8 --> n9
+  n10 -->|yes| n11
+  n9 --> n10
+  n7 -->|yes| n8
+  n13 -->|yes| n14
+  n12 --> n13
+  n14 --> n15
+  n13 -->|no| n15
+  n7 -->|no| n12
+  n6 --> n7
+  n11 --> n16
+  n10 -->|no| n16
+  n15 --> n16
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n16 terminal
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f
+  class n3,n7,n10,n13 decision
+  classDef failNode fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  class n15 failNode
+```
+
+#### Proteomics SamplePrep (`SamplePrepProteomicsPipeline` — `diagrams/sample_prep_proteomics.mmd`)
+
+```mermaid
+flowchart TD
+  n1(["Start"])
+  subgraph sg_1 ["sample_prep_proteomics - FOREACH (parallel): sample in samples"]
+    n2{"usePanel?"}
+    n3["sample.ingest_panel"]
+    n4["sample.download_msdata"]
+    n5{"useDda?"}
+    n6["sample.sage"]
+    n7["register_abundance_dda<br/>sample.register_abundance<br/>source=sage"]
+    n8["sample.diann"]
+    n9{"useRescore?"}
+    n10["sample.dl_rescore"]
+    n11["sample.register_abundance<br/>source=diann"]
+    n12["sample.proteomics_qc"]
+    n13{"qcPass?"}
+    n14["sample.archive_sample<br/>mode=full"]
+    n15{"deleteFastqs?"}
+    n16["sample.delete_fastqs"]
+    n17["archive_sample_qc_only<br/>sample.archive_sample<br/>mode=qc_only"]
+    n18["proteomics_qc_failed<br/>sample.qc_failed<br/>reason=proteomics_qc_failed"]
+  end
+  n19(["End"])
+  n1 --> n2
+  n2 -->|yes| n3
+  n6 --> n7
+  n5 -->|yes| n6
+  n9 -->|yes| n10
+  n8 --> n9
+  n10 --> n11
+  n9 -->|no| n11
+  n5 -->|no| n8
+  n4 --> n5
+  n2 -->|no| n4
+  n3 --> n12
+  n7 --> n12
+  n11 --> n12
+  n15 -->|yes| n16
+  n14 --> n15
+  n13 -->|yes| n14
+  n17 --> n18
+  n13 -->|no| n17
+  n12 --> n13
+  n16 --> n19
+  n15 -->|no| n19
+  n18 --> n19
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n19 terminal
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f
+  class n2,n5,n9,n13,n15 decision
+  classDef failNode fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  class n18 failNode
+```
 
 ## 3.3 Analytes
 
@@ -119,8 +230,9 @@ from ordinary DNA sequencing:
    Convert a sequence, choose which CpGs are methylated, and watch the estimated conversion rate
    drop when you simulate incomplete conversion.
 
-3. Use the pack chooser in the notebook: pick a modality, analyte and technique and see which
-   program runs and which gates switch on.
+3. Use the pack chooser in the notebook: pick a modality, analyte and technique and inspect both
+   the resolved settings table and the live rendered SamplePrep and Study Lifecycle Mermaid
+   diagrams (`mo.mermaid`) that update for your selection.
 
 ## Practice
 

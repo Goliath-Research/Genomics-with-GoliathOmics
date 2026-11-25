@@ -85,7 +85,20 @@ def _(m3, mo):
 @app.cell
 def _(m3, mo, modality, procedure):
     plan = m3.choose(modality.value, procedure.value if modality.value == "methylation" else None)
-    mo.md("\n".join(["| Setting | Value |", "|---|---|"] + [f"| {k} | `{v}` |" for k, v in plan.items()]))
+    table = mo.md(
+        "\n".join(["| Setting | Value |", "|---|---|"] + [f"| {k} | `{v}` |" for k, v in plan.items()])
+    )
+    prep_mmd = m3.load_diagram(plan["sample_prep"])
+    study_mmd = m3.load_diagram(plan["study"])
+    mo.vstack(
+        [
+            table,
+            mo.md(f"### SamplePrep workflow (`{plan['sample_prep']}`)"),
+            mo.mermaid(prep_mmd),
+            mo.md(f"### Study lifecycle workflow (`{plan['study']}`)"),
+            mo.mermaid(study_mmd),
+        ]
+    )
     return
 
 

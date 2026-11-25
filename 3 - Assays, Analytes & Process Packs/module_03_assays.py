@@ -6,7 +6,21 @@ the pinned commit. It is a study aid, not the platform's resolver.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 COMPLEMENT = str.maketrans("ACGTN", "TGCAN")
+DIAGRAMS_DIR = Path(__file__).resolve().parents[1] / "diagrams"
+
+
+def diagram_path(program_filename: str) -> Path:
+    """Return the exported Mermaid (.mmd) diagram path for a ``*.program.json`` file."""
+    stem = program_filename.removesuffix(".program.json")
+    return DIAGRAMS_DIR / f"{stem}.mmd"
+
+
+def load_diagram(program_filename: str) -> str:
+    """Read the Mermaid flowchart source for ``program_filename``."""
+    return diagram_path(program_filename).read_text(encoding="utf-8")
 
 
 def revcomp(seq: str) -> str:
@@ -111,6 +125,8 @@ def choose(modality: str, procedure: str | None = None, analyte: str | None = No
         raise ValueError(f"unknown modality {modality!r}")
     plan = dict(MODALITIES[modality], modality=modality)
     if modality != "methylation":
+        plan["sample_prep_diagram"] = f"diagrams/{diagram_path(plan['sample_prep']).name}"
+        plan["study_diagram"] = f"diagrams/{diagram_path(plan['study']).name}"
         plan["note"] = "analyte packs and bisulfite QC apply to methylation only"
         return plan
     if procedure is None:
@@ -119,12 +135,16 @@ def choose(modality: str, procedure: str | None = None, analyte: str | None = No
     analyte = analyte or expected_analyte
     if analyte != expected_analyte:
         raise ValueError(f"primary_analyte {analyte!r} does not match {procedure} analyteExpectation {expected_analyte!r}")
+    sample_prep_file = f"{sample_prep}.program.json"
+    study_file = f"{lifecycle}.program.json"
     plan.update(
         procedure=procedure,
         libraryProtocol=protocol,
         analyte=analyte,
-        sample_prep=f"{sample_prep}.program.json",
-        study=f"{lifecycle}.program.json",
+        sample_prep=sample_prep_file,
+        study=study_file,
+        sample_prep_diagram=f"diagrams/{diagram_path(sample_prep_file).name}",
+        study_diagram=f"diagrams/{diagram_path(study_file).name}",
         **ANALYTE_SWITCHES[analyte],
     )
     return plan

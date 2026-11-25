@@ -1,0 +1,17 @@
+flowchart TD
+  n1(["Start"])
+  n2["seed_page_path<br/>pagePath = workflow.const_path"]
+  n3["seed_has_more<br/>hasMore = workflow.const_bool"]
+  n4{"while: hasMore?"}
+  n5["read_has_more<br/>hasMore = workflow.json_path_bool"]
+  n6(["End"])
+  n1 --> n2
+  n2 --> n3
+  n4 -->|true| n5
+  n5 --> n4
+  n3 --> n4
+  n4 -->|false| n6
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n6 terminal
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f
+  class n4 decision

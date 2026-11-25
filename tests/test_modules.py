@@ -44,6 +44,16 @@ def test_choose_covers_every_modality_and_procedure():
     for proc in m03.PROCEDURES:
         plan = m03.choose("methylation", proc)
         assert plan["sample_prep"].endswith(".program.json")
+        assert m03.diagram_path(plan["sample_prep"]).is_file(), proc
+        assert m03.diagram_path(plan["study"]).is_file(), proc
+        assert m03.load_diagram(plan["sample_prep"]).startswith("flowchart TD\n")
+        assert m03.load_diagram(plan["study"]).startswith("flowchart TD\n")
+    for modality in ("rnaseq", "proteomics"):
+        plan = m03.choose(modality)
+        assert m03.diagram_path(plan["sample_prep"]).is_file(), modality
+        assert m03.diagram_path(plan["study"]).is_file(), modality
+        assert m03.load_diagram(plan["sample_prep"]).startswith("flowchart TD\n")
+        assert m03.load_diagram(plan["study"]).startswith("flowchart TD\n")
     assert m03.choose("rnaseq")["profile"] == "rnaseq_research"
     assert m03.choose("methylation", "cfdna_emseq_targeted")["fragmentomics"] is True
     assert m03.choose("methylation", "plant_wgbs_gene_fc")["non_cpg_cap_opened"] is True

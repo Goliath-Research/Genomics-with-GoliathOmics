@@ -1,0 +1,119 @@
+flowchart TD
+  n1(["Start"])
+  subgraph sg_1 ["sample_prep - FOREACH (parallel): sample in samples"]
+    n2["sample.download_fastq"]
+    n3["sample.parabricks_fq2bam"]
+    n4["sample.methyl_qc"]
+    n5{"qcPass?"}
+    n6{"isCfdna?"}
+    n7["methyl_fragmentomics<br/>sample.fragmentomics"]
+    n8["sample.methyl_extract"]
+    n9["sample.extraction_qc"]
+    n10{"extractionQcPass?"}
+    n11["sample.archive_sample<br/>mode=full"]
+    n12{"deleteFastqs?"}
+    n13["sample.delete_fastqs"]
+    n14["sample.delete_bam"]
+    n15["archive_sample_qc_only<br/>sample.archive_sample<br/>mode=qc_only"]
+    n16{"deleteFastqs?"}
+    n17["delete_fastqs_extraction_fail<br/>sample.delete_fastqs"]
+    n18["delete_bam_extraction_fail<br/>sample.delete_bam"]
+    n19["extraction_qc_failed<br/>sample.qc_failed<br/>reason=extraction_qc_failed"]
+    n20{"remediateAlignment?"}
+    n21["sample.trim_fastq"]
+    n22["parabricks_realign<br/>sample.parabricks_fq2bam"]
+    n23["methyl_qc_retry<br/>sample.methyl_qc<br/>qcAttempt=2"]
+    n24{"qcPass?"}
+    n25{"isCfdna?"}
+    n26["methyl_fragmentomics_retry<br/>sample.fragmentomics"]
+    n27["methyl_extract_retry<br/>sample.methyl_extract"]
+    n28["extraction_qc_retry<br/>sample.extraction_qc"]
+    n29{"extractionQcPass?"}
+    n30["archive_sample_retry<br/>sample.archive_sample<br/>mode=full"]
+    n31{"deleteFastqs?"}
+    n32["delete_fastqs_after_retry<br/>sample.delete_fastqs"]
+    n33["delete_bam_retry<br/>sample.delete_bam"]
+    n34["archive_sample_qc_only_retry<br/>sample.archive_sample<br/>mode=qc_only"]
+    n35{"deleteFastqs?"}
+    n36["delete_fastqs_extraction_fail_retry<br/>sample.delete_fastqs"]
+    n37["delete_bam_extraction_fail_retry<br/>sample.delete_bam"]
+    n38["extraction_qc_failed_retry<br/>sample.qc_failed<br/>reason=extraction_qc_failed"]
+    n39["archive_sample_qc_only_align_retry<br/>sample.archive_sample<br/>mode=qc_only"]
+    n40{"deleteFastqs?"}
+    n41["delete_fastqs_retry_fail<br/>sample.delete_fastqs"]
+    n42["delete_bam_retry_fail<br/>sample.delete_bam"]
+    n43["qc_failed_after_retry<br/>sample.qc_failed"]
+    n44["archive_sample_qc_only_align<br/>sample.archive_sample<br/>mode=qc_only"]
+    n45{"deleteFastqs?"}
+    n46["delete_fastqs_fail<br/>sample.delete_fastqs"]
+    n47["delete_bam_fail<br/>sample.delete_bam"]
+    n48["sample.qc_failed"]
+  end
+  n49(["End"])
+  n1 --> n2
+  n2 --> n3
+  n3 --> n4
+  n6 -->|yes| n7
+  n7 --> n8
+  n6 -->|no| n8
+  n8 --> n9
+  n12 -->|yes| n13
+  n11 --> n12
+  n13 --> n14
+  n12 -->|no| n14
+  n10 -->|yes| n11
+  n16 -->|yes| n17
+  n15 --> n16
+  n17 --> n18
+  n16 -->|no| n18
+  n18 --> n19
+  n10 -->|no| n15
+  n9 --> n10
+  n5 -->|yes| n6
+  n21 --> n22
+  n22 --> n23
+  n25 -->|yes| n26
+  n26 --> n27
+  n25 -->|no| n27
+  n27 --> n28
+  n31 -->|yes| n32
+  n30 --> n31
+  n32 --> n33
+  n31 -->|no| n33
+  n29 -->|yes| n30
+  n35 -->|yes| n36
+  n34 --> n35
+  n36 --> n37
+  n35 -->|no| n37
+  n37 --> n38
+  n29 -->|no| n34
+  n28 --> n29
+  n24 -->|yes| n25
+  n40 -->|yes| n41
+  n39 --> n40
+  n41 --> n42
+  n40 -->|no| n42
+  n42 --> n43
+  n24 -->|no| n39
+  n23 --> n24
+  n20 -->|yes| n21
+  n45 -->|yes| n46
+  n44 --> n45
+  n46 --> n47
+  n45 -->|no| n47
+  n47 --> n48
+  n20 -->|no| n44
+  n5 -->|no| n20
+  n4 --> n5
+  n14 --> n49
+  n19 --> n49
+  n33 --> n49
+  n38 --> n49
+  n43 --> n49
+  n48 --> n49
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n49 terminal
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f
+  class n5,n6,n10,n12,n16,n20,n24,n25,n29,n31,n35,n40,n45 decision
+  classDef failNode fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  class n19,n38,n43,n48 failNode

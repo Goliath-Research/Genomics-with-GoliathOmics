@@ -32,6 +32,187 @@ compiled and versioned by `scripts/deploy_workflow_definitions.sh` into `wf.work
 `wf.workflow_version`. The lab holds 7 definitions and one queued SamplePrep request for the public
 sample.
 
+### 9.1b Reading DomainPrograms as Mermaid diagrams
+
+GoliathApp ships a generic renderer (`goliath-cfg render-mermaid` / `python3 -m domain.mermaid`)
+that converts any `*.program.json` into a Mermaid flowchart without knowing anything about omics.
+GoliathOmics publishes all 41 rendered workflow diagrams in the
+[DomainProgram catalog](https://goliath-research.github.io/GoliathOmics/workflows/), and this
+course ships all 41 standalone `.mmd` files in [`diagrams/`](../diagrams/README.md).
+
+Below is the full **`SamplePrepPipeline`** graph (`diagrams/sample_prep.mmd`) that compiles into
+`wf.workflow_node` and `wf.workflow_edge` in the lab database:
+
+```mermaid
+flowchart TD
+  n1(["Start"])
+  subgraph sg_1 ["sample_prep - FOREACH (parallel): sample in samples"]
+    n2["sample.download_fastq"]
+    n3{"useWgbsPangenome?"}
+    n4["sample.methylgrapher_wgbs_align"]
+    n5{"usePangenome?"}
+    n6["sample.parabricks_giraffe"]
+    n7["sample.parabricks_fq2bam"]
+    n8["sample.methyl_qc"]
+    n9{"qcPass?"}
+    n10{"isCfdna?"}
+    n11["methyl_fragmentomics<br/>sample.fragmentomics"]
+    n12{"useWgbsPangenome?"}
+    n13["sample.methylgrapher_wgbs_extract"]
+    n14["sample.methyl_extract"]
+    n15["sample.extraction_qc"]
+    n16{"extractionQcPass?"}
+    n17["sample.archive_sample<br/>mode=full"]
+    n18{"deleteFastqs?"}
+    n19["sample.delete_fastqs"]
+    n20["sample.delete_bam"]
+    n21["archive_sample_qc_only<br/>sample.archive_sample<br/>mode=qc_only"]
+    n22{"deleteFastqs?"}
+    n23["delete_fastqs_extraction_fail<br/>sample.delete_fastqs"]
+    n24["delete_bam_extraction_fail<br/>sample.delete_bam"]
+    n25["extraction_qc_failed<br/>sample.qc_failed<br/>reason=extraction_qc_failed"]
+    n26{"remediateAlignment?"}
+    n27["sample.trim_fastq"]
+    n28{"useWgbsPangenome?"}
+    n29["methylgrapher_wgbs_realign<br/>sample.methylgrapher_wgbs_align"]
+    n30{"usePangenome?"}
+    n31["parabricks_giraffe_realign<br/>sample.parabricks_giraffe"]
+    n32["parabricks_realign<br/>sample.parabricks_fq2bam"]
+    n33["methyl_qc_retry<br/>sample.methyl_qc<br/>qcAttempt=2"]
+    n34{"qcPass?"}
+    n35{"isCfdna?"}
+    n36["methyl_fragmentomics_retry<br/>sample.fragmentomics"]
+    n37{"useWgbsPangenome?"}
+    n38["methylgrapher_wgbs_extract_retry<br/>sample.methylgrapher_wgbs_extract"]
+    n39["methyl_extract_retry<br/>sample.methyl_extract"]
+    n40["extraction_qc_retry<br/>sample.extraction_qc"]
+    n41{"extractionQcPass?"}
+    n42["archive_sample_retry<br/>sample.archive_sample<br/>mode=full"]
+    n43{"deleteFastqs?"}
+    n44["delete_fastqs_after_retry<br/>sample.delete_fastqs"]
+    n45["delete_bam_retry<br/>sample.delete_bam"]
+    n46["archive_sample_qc_only_retry<br/>sample.archive_sample<br/>mode=qc_only"]
+    n47{"deleteFastqs?"}
+    n48["delete_fastqs_extraction_fail_retry<br/>sample.delete_fastqs"]
+    n49["delete_bam_extraction_fail_retry<br/>sample.delete_bam"]
+    n50["extraction_qc_failed_retry<br/>sample.qc_failed<br/>reason=extraction_qc_failed"]
+    n51["archive_sample_qc_only_align_retry<br/>sample.archive_sample<br/>mode=qc_only"]
+    n52{"deleteFastqs?"}
+    n53["delete_fastqs_retry_fail<br/>sample.delete_fastqs"]
+    n54["delete_bam_retry_fail<br/>sample.delete_bam"]
+    n55["qc_failed_after_retry<br/>sample.qc_failed<br/>reason=alignment_qc_failed_after_retry"]
+    n56["archive_sample_qc_only_align<br/>sample.archive_sample<br/>mode=qc_only"]
+    n57{"deleteFastqs?"}
+    n58["delete_fastqs_fail<br/>sample.delete_fastqs"]
+    n59["delete_bam_fail<br/>sample.delete_bam"]
+    n60["sample.qc_failed<br/>reason=alignment_qc_failed"]
+  end
+  n61(["End"])
+  n1 --> n2
+  n3 -->|yes| n4
+  n5 -->|yes| n6
+  n5 -->|no| n7
+  n3 -->|no| n5
+  n2 --> n3
+  n4 --> n8
+  n6 --> n8
+  n7 --> n8
+  n10 -->|yes| n11
+  n12 -->|yes| n13
+  n12 -->|no| n14
+  n11 --> n12
+  n10 -->|no| n12
+  n13 --> n15
+  n14 --> n15
+  n18 -->|yes| n19
+  n17 --> n18
+  n19 --> n20
+  n18 -->|no| n20
+  n16 -->|yes| n17
+  n22 -->|yes| n23
+  n21 --> n22
+  n23 --> n24
+  n22 -->|no| n24
+  n24 --> n25
+  n16 -->|no| n21
+  n15 --> n16
+  n9 -->|yes| n10
+  n28 -->|yes| n29
+  n30 -->|yes| n31
+  n30 -->|no| n32
+  n28 -->|no| n30
+  n27 --> n28
+  n29 --> n33
+  n31 --> n33
+  n32 --> n33
+  n35 -->|yes| n36
+  n37 -->|yes| n38
+  n37 -->|no| n39
+  n36 --> n37
+  n35 -->|no| n37
+  n38 --> n40
+  n39 --> n40
+  n43 -->|yes| n44
+  n42 --> n43
+  n44 --> n45
+  n43 -->|no| n45
+  n41 -->|yes| n42
+  n47 -->|yes| n48
+  n46 --> n47
+  n48 --> n49
+  n47 -->|no| n49
+  n49 --> n50
+  n41 -->|no| n46
+  n40 --> n41
+  n34 -->|yes| n35
+  n52 -->|yes| n53
+  n51 --> n52
+  n53 --> n54
+  n52 -->|no| n54
+  n54 --> n55
+  n34 -->|no| n51
+  n33 --> n34
+  n26 -->|yes| n27
+  n57 -->|yes| n58
+  n56 --> n57
+  n58 --> n59
+  n57 -->|no| n59
+  n59 --> n60
+  n26 -->|no| n56
+  n9 -->|no| n26
+  n8 --> n9
+  n20 --> n61
+  n25 --> n61
+  n45 --> n61
+  n50 --> n61
+  n55 --> n61
+  n60 --> n61
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n61 terminal
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f
+  class n3,n5,n9,n10,n12,n16,n18,n22,n26,n28,n30,n34,n35,n37,n41,n43,n47,n52,n57 decision
+  classDef failNode fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  class n25,n50,n55,n60 failNode
+```
+
+For event-driven workflows (`wf.event` / `wf.event_delivery`), the fixture **`event_wait_ack`**
+(`diagrams/event_wait_ack.mmd`) shows how `on` triggers and `WAIT_EVENT` nodes render:
+
+```mermaid
+flowchart TD
+  n1(["on: sensor.sample_ready<br/>(start_instance)"])
+  n2[["wait_ack<br/>WAIT: operator.ack<br/>corr: sampleId"]]
+  n3["ack_const<br/>workflow.const_bool<br/>out: acked"]
+  n4(["End"])
+  n1 --> n2
+  n2 --> n3
+  n3 --> n4
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n4 terminal
+  classDef waitNode fill:#f3e8ff,stroke:#7c3aed,color:#3b0764
+  class n2 waitNode
+```
+
 ## 9.2 The database record (GoliathApp)
 
 | Table | What it records |

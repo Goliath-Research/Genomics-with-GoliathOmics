@@ -50,6 +50,25 @@ def test_modality_programs_exist(omics_src: Path):
         assert (fixtures / plan["study"]).is_file(), modality
 
 
+def test_diagrams_match_pinned_fixtures(omics_src: Path):
+    fixtures = omics_src / "workflow_engine" / "domain" / "fixtures"
+    diagrams_dir = Path(__file__).resolve().parents[1] / "diagrams"
+    for prog in sorted(fixtures.glob("*.program.json")):
+        stem = prog.name.removesuffix(".program.json")
+        assert (diagrams_dir / f"{stem}.mmd").is_file(), f"missing diagrams/{stem}.mmd"
+
+    gen_script = omics_src / "scripts" / "generate_domain_program_diagrams.py"
+    if gen_script.is_file():
+        gen = load_official(omics_src, "scripts/generate_domain_program_diagrams.py")
+        _, expected_mmds = gen.build_expected_docs(
+            fixtures,
+            omics_src / "workflow_engine" / "domain" / "diagram_categories.json",
+        )
+        for name, expected in sorted(expected_mmds.items()):
+            actual = (diagrams_dir / name).read_text(encoding="utf-8")
+            assert actual == expected, f"diagrams/{name} drifted from GoliathOmics"
+
+
 def test_deep_merge_matches_official(omics_src: Path):
     deep_merge = load_official(omics_src, "packages/methylutils/methyl_utils/action_config_resolver.py").deep_merge
 

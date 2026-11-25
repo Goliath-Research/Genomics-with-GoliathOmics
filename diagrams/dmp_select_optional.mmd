@@ -1,0 +1,17 @@
+flowchart TD
+  n1(["Start"])
+  subgraph sg_1 ["FOREACH (sequential): comparison in project.comparisons x chromosome in project.chromosomes"]
+    n2["detect<br/>pipeline.detector"]
+    n3{"runDmpSelection?"}
+    n4["pipeline.dmp_select"]
+  end
+  n5(["End"])
+  n1 --> n2
+  n3 -->|yes| n4
+  n2 --> n3
+  n4 --> n5
+  n3 -->|no| n5
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n5 terminal
+  classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f
+  class n3 decision

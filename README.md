@@ -15,7 +15,9 @@
 > claim it complies with 21 CFR Part 11.
 
 **Delivery format:** module reference guides (`NN_content.md`), Marimo notebooks where a concept
-is clearer when you can change it, SQL lab scripts, and pytest checks.
+is clearer when you can change it, generated [Mermaid workflow diagrams](diagrams/README.md) for all
+41 GoliathOmics DomainPrograms (matching the published [GoliathOmics DomainProgram catalog](https://goliath-research.github.io/GoliathOmics/workflows/)),
+SQL lab scripts, and pytest checks.
 
 ## Prerequisites
 

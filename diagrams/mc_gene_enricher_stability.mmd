@@ -1,0 +1,32 @@
+flowchart TD
+  n1(["Start"])
+  n2["validation.plan_iterations"]
+  subgraph sg_1 ["FOREACH (parallel): seedGroup in centroidSeedGroups x context in project.contexts x chromosome in project.chromosomes"]
+    n3["centroid_seed<br/>pipeline.centroid"]
+  end
+  subgraph sg_2 ["FOREACH (parallel): iteration in iterations"]
+    subgraph sg_3 ["FOREACH (parallel): group in iteration.centroidGroups x chromosome in project.chromosomes"]
+      n4["pipeline.centroid"]
+    end
+    subgraph sg_4 ["FOREACH (parallel): comparison in project.comparisons"]
+      subgraph sg_5 ["FOREACH (parallel): chromosome in project.chromosomes"]
+        n5["detect<br/>pipeline.detector"]
+      end
+      n6["pipeline.mapper"]
+      n7["pipeline.enricher"]
+    end
+  end
+  n8["validation.stability"]
+  n9["readiness<br/>validation.stability_freeze_readiness"]
+  n10(["End"])
+  n1 --> n2
+  n2 --> n3
+  n5 --> n6
+  n6 --> n7
+  n4 --> n5
+  n3 --> n4
+  n7 --> n8
+  n8 --> n9
+  n9 --> n10
+  classDef terminal fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+  class n1,n10 terminal
